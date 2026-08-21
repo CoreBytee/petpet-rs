@@ -20,9 +20,9 @@ const FRAMES_BYTES: [&'static [u8]; 10] = [
     include_bytes!("../assets/pet9.gif"),
 ];
 
-static PRELOADED_FRAMES: OnceLock<Vec<DynamicImage>> = OnceLock::new();
+static PRELOADED_FRAMES: OnceLock<Vec<image::RgbaImage>> = OnceLock::new();
 
-fn get_frames() -> &'static [DynamicImage] {
+fn get_frames() -> &'static [image::RgbaImage] {
     PRELOADED_FRAMES.get_or_init(|| {
         FRAMES_BYTES
             .iter()
@@ -30,6 +30,7 @@ fn get_frames() -> &'static [DynamicImage] {
                 let img = image::load_from_memory_with_format(bytes, ImageFormat::Gif)
                     .expect("Failed to load asset frame");
                 img.resize_exact(128, 128, image::imageops::FilterType::Triangle)
+                    .to_rgba8()
             })
             .collect()
     })
@@ -39,12 +40,13 @@ pub fn petpet(input: &DynamicImage) -> Vec<u8> {
     let start_time = Instant::now();
     tracing::info!("Starting petpet processing...");
 
-    let resized_input = input.resize_exact(128, 128, image::imageops::FilterType::Lanczos3);
+    let resized_input = input.resize_exact(128, 128, image::imageops::FilterType::Triangle);
+    let resized_input_rgba = resized_input.to_rgba8();
     let frames = get_frames();
 
     tracing::info!("Generating {} frames in parallel...", frames.len());
     let gen_start = Instant::now();
-    let processed_frames: Vec<image::RgbaImage> = (0..frames.len())
+    let processed_frames: Vec<Frame> = (0..frames.len())
         .into_par_iter()
         .map(|index| {
             let frame_image = &frames[index];
@@ -61,10 +63,11 @@ pub fn petpet(input: &DynamicImage) -> Vec<u8> {
             let offset_x = (1.0 - width) * 0.5 + 0.1;
             let offset_y = 1.0 - height - 0.08;
 
-            let warped_input = resized_input.resize_exact(
+            let warped_input = image::imageops::resize(
+                &resized_input_rgba,
                 (128.0 * width) as u32,
                 (128.0 * height) as u32,
-                image::imageops::FilterType::Lanczos3,
+                image::imageops::FilterType::Nearest,
             );
 
             image::imageops::overlay(
@@ -75,7 +78,9 @@ pub fn petpet(input: &DynamicImage) -> Vec<u8> {
             );
 
             image::imageops::overlay(&mut base, frame_image, 0, 0);
-            base
+
+            let delay = Delay::from_numer_denom_ms(30, 1);
+            Frame::from_parts(base, 0, 0, delay)
         })
         .collect();
     let gen_duration = gen_start.elapsed();
@@ -87,11 +92,7 @@ pub fn petpet(input: &DynamicImage) -> Vec<u8> {
     let mut encoder = GifEncoder::new(&mut buffer);
     encoder.set_repeat(Repeat::Infinite).unwrap();
 
-    for base in processed_frames {
-        let delay = Delay::from_numer_denom_ms(30, 1);
-        let image_frame = Frame::from_parts(base, 0, 0, delay);
-        encoder.encode_frame(image_frame).unwrap();
-    }
+    encoder.encode_frames(processed_frames).unwrap();
 
     drop(encoder);
     let enc_duration = enc_start.elapsed();
