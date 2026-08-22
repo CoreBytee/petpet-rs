@@ -27,6 +27,9 @@ pub struct PetpetOptions {
     pub resolution: u32,
     /// Whether the input image should be masked into a circle.
     pub rounded: bool,
+    /// Quality of the output GIF (1-30, lower is better quality but slower encoding).
+    /// 1 = best quality (slowest), 30 = worst quality (fastest).
+    pub quality: u32,
 }
 
 impl Default for PetpetOptions {
@@ -34,6 +37,7 @@ impl Default for PetpetOptions {
         Self {
             resolution: 128,
             rounded: false,
+            quality: 10,
         }
     }
 }
@@ -79,6 +83,7 @@ pub fn petpet(input: &DynamicImage, options: PetpetOptions) -> Vec<u8> {
     let PetpetOptions {
         resolution,
         rounded,
+        quality,
     } = options;
     assert!(resolution > 0, "resolution must be non-zero");
 
@@ -149,7 +154,8 @@ pub fn petpet(input: &DynamicImage, options: PetpetOptions) -> Vec<u8> {
     tracing::info!("Encoding GIF...");
     let enc_start = Instant::now();
     let mut buffer = Vec::new();
-    let mut encoder = GifEncoder::new(&mut buffer);
+    let speed = quality as i32;
+    let mut encoder = GifEncoder::new_with_speed(&mut buffer, speed);
     encoder.set_repeat(Repeat::Infinite).unwrap();
 
     encoder.encode_frames(processed_frames).unwrap();
@@ -178,6 +184,7 @@ mod tests {
             PetpetOptions {
                 resolution: 64,
                 rounded: true,
+                quality: 10,
             },
         );
 
