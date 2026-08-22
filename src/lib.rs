@@ -23,10 +23,8 @@ const FRAMES_BYTES: [&'static [u8]; 10] = [
 /// Options controlling the generated petpet GIF.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PetpetOptions {
-    /// Width of the output GIF in pixels.
-    pub width: u32,
-    /// Height of the output GIF in pixels.
-    pub height: u32,
+    /// Width and height of the output GIF in pixels (aspect ratio is always 1:1).
+    pub resolution: u32,
     /// Whether the input image should be masked into a circle.
     pub rounded: bool,
 }
@@ -34,8 +32,7 @@ pub struct PetpetOptions {
 impl Default for PetpetOptions {
     fn default() -> Self {
         Self {
-            width: 128,
-            height: 128,
+            resolution: 128,
             rounded: false,
         }
     }
@@ -80,20 +77,20 @@ fn apply_circle_mask(image: &mut image::RgbaImage) {
 
 pub fn petpet(input: &DynamicImage, options: PetpetOptions) -> Vec<u8> {
     let PetpetOptions {
-        width,
-        height,
+        resolution,
         rounded,
     } = options;
-    assert!(
-        width > 0 && height > 0,
-        "output resolution must be non-zero"
-    );
+    assert!(resolution > 0, "resolution must be non-zero");
 
     let start_time = Instant::now();
     tracing::info!("Starting petpet processing...");
 
     let mut resized_input_rgba = input
-        .resize_exact(width, height, image::imageops::FilterType::Triangle)
+        .resize_exact(
+            resolution,
+            resolution,
+            image::imageops::FilterType::Triangle,
+        )
         .to_rgba8();
 
     if rounded {
@@ -109,11 +106,11 @@ pub fn petpet(input: &DynamicImage, options: PetpetOptions) -> Vec<u8> {
         .map(|index| {
             let frame_image = image::imageops::resize(
                 &frames[index],
-                width,
-                height,
+                resolution,
+                resolution,
                 image::imageops::FilterType::Triangle,
             );
-            let mut base = image::RgbaImage::new(width, height);
+            let mut base = image::RgbaImage::new(resolution, resolution);
 
             let j = if index < frames.len() / 2 {
                 index
@@ -128,16 +125,16 @@ pub fn petpet(input: &DynamicImage, options: PetpetOptions) -> Vec<u8> {
 
             let warped_input = image::imageops::resize(
                 &resized_input_rgba,
-                (width as f32 * scale_x) as u32,
-                (height as f32 * scale_y) as u32,
+                (resolution as f32 * scale_x) as u32,
+                (resolution as f32 * scale_y) as u32,
                 image::imageops::FilterType::Nearest,
             );
 
             image::imageops::overlay(
                 &mut base,
                 &warped_input,
-                (width as f32 * offset_x) as i64,
-                (height as f32 * offset_y) as i64,
+                (resolution as f32 * offset_x) as i64,
+                (resolution as f32 * offset_y) as i64,
             );
 
             image::imageops::overlay(&mut base, &frame_image, 0, 0);
@@ -179,15 +176,14 @@ mod tests {
         let output = petpet(
             &input,
             PetpetOptions {
-                width: 64,
-                height: 48,
+                resolution: 64,
                 rounded: true,
             },
         );
 
         // GIF logical screen width/height live at bytes 6..10, little-endian.
         assert_eq!(u16::from_le_bytes([output[6], output[7]]), 64);
-        assert_eq!(u16::from_le_bytes([output[8], output[9]]), 48);
+        assert_eq!(u16::from_le_bytes([output[8], output[9]]), 64);
     }
 
     #[test]
