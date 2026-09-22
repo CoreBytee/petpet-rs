@@ -65,6 +65,11 @@ The petpet effect is created by:
 
 Frame generation runs in parallel using Rayon for maximum performance.
 
+## Credits
+
+- https://github.com/SomeAspy/pet-pet-gif
+- https://benisland.neocities.org/petpet/
+
 ## License
 
 petpet-rs is licensed under the [MIT License](LICENSE).
