@@ -11,10 +11,10 @@ A fast, parallel Rust library for generating "petpet" GIFs.
 ## Features
 
 - **Parallel frame generation** using Rayon
-- **Customizable resolution** — output GIFs from 16px to any size
-- **Circular masking** — clip input images to a circle (Discord avatar style)
-- **Quality control** — tune encoding speed vs. output quality (1-30)
-- **Zero dependencies at runtime** — all GIF frames are embedded as bytes
+- **Customizable resolution** output GIFs from 16px to any size
+- **Circular masking** clip input images to a circle (Discord avatar style)
+- **Quality control** tune encoding speed vs. output quality (1-30)
+- **Zero dependencies at runtime** all GIF frames are embedded as bytes
 
 ## Installation
 
