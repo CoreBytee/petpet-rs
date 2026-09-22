@@ -1,3 +1,5 @@
+<img src="./README.gif" align="left" width="200"/>
+
 # petpet-rs
 
 A fast, parallel Rust library for generating "petpet" GIFs.
