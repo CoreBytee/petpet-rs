@@ -4,6 +4,9 @@
 
 A fast, parallel Rust library for generating "petpet" GIFs.
 
+<br/>
+<br/>
+
 ## Features
 
 - **Parallel frame generation** using Rayon
