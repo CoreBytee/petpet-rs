@@ -6,6 +6,7 @@ A fast, parallel Rust library for generating "petpet" GIFs.
 
 <br/>
 <br/>
+<br/>
 
 ## Features
 
